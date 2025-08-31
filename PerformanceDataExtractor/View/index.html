@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Test Data Extractor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background-color: #fafafa;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            color: #1a1a1a;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+            border: 1px solid #f0f0f0;
+        }
+
+        .card h3 {
+            color: #000;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #d0d0d0;
+            border-radius: 8px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #000;
+            background-color: #f5f5f5;
+        }
+
+        .upload-area h4 {
+            color: #000;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .upload-area p {
+            color: #666;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: #fafafa;
+            border-radius: 6px;
+            border-left: 3px solid #000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn {
+            background: #000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #333;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #666;
+        }
+
+        .btn-success {
+            background: #000;
+            border: 2px solid #000;
+        }
+
+        .btn-success:hover {
+            background: white;
+            color: #000;
+        }
+
+        /* Clean Dashboard */
+        .dashboard {
+            display: none;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-title {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .trend-indicator {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .trend-up {
+            background: #f8f8f8;
+            color: #000;
+            border-color: #d0d0d0;
+        }
+
+        .trend-down {
+            background: #f0f0f0;
+            color: #333;
+            border-color: #c0c0c0;
+        }
+
+        .trend-stable {
+            background: #fafafa;
+            color: #666;
+            border-color: #e0e0e0;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-change {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .health-status {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+        }
+
+        .health-score {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .health-info h3 {
+            color: #000;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .health-info p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .top-requests {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .request-list {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+        }
+
+        .request-list h3 {
+            color: #000;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .request-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            background: #fafafa;
+            border-radius: 6px;
+            border-left: 3px solid #e0e0e0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .request-fast {
+            border-left-color: #000;
+            background: #f8f8f8;
+        }
+
+        .request-slow {
+            border-left-color: #666;
+            background: #f5f5f5;
+        }
+
+        .insights-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .insights-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+        }
+
+        .insights-card h3 {
+            color: #000;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .insight-item {
+            padding: 1rem;
+            margin: 0.75rem 0;
+            background: #fafafa;
+            border-radius: 6px;
+            border-left: 3px solid #000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .recommendation-item {
+            padding: 1rem;
+            margin: 0.75rem 0;
+            background: #f8f8f8;
+            border-radius: 6px;
+            border-left: 3px solid #666;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 1rem;
+            background: white;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .uploaded-files {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .uploaded-files h4 {
+            color: #000;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            display: none;
+            border: 1px solid #e0e0e0;
+        }
+
+        .status.success {
+            background: #f8f8f8;
+            color: #000;
+            border-color: #d0d0d0;
+        }
+
+        .status.error {
+            background: #f5f5f5;
+            color: #000;
+            border-color: #c0c0c0;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f0f0f0;
+            border-top: 2px solid #000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .remove-file {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        .remove-file:hover {
+            background: #000;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .top-requests {
+                grid-template-columns: 1fr;
+            }
+
+            .insights-section {
+                grid-template-columns: 1fr;
+            }
+
+            .health-status {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Performance Analytics Dashboard</h1>
+            <p>Extract and analyze Postman performance test data</p>
+        </div>
+
+        <div class="card">
+            <h3>API Configuration</h3>
+            <div class="form-group">
+                <label for="apiUrl">API Base URL:</label>
+                <input type="text" id="apiUrl" value="http://localhost:5000" placeholder="Enter your API URL">
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Upload Multiple Performance Reports</h3>
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <h4>Click to select HTML files or drag & drop</h4>
+                <p>Upload multiple Postman performance test reports (.html files)</p>
+                <input type="file" id="fileInput" class="file-input" accept=".html" multiple
+                    onchange="handleFileSelect(event)">
+            </div>
+
+            <div class="uploaded-files" id="uploadedFiles">
+                <h4>Selected Files:</h4>
+                <div id="filesList"></div>
+                <div class="actions">
+                    <button class="btn" onclick="processAllFiles()" id="processBtn">
+                        <span>Process All Files</span>
+                    </button>
+                    <button class="btn btn-success" onclick="uploadAllToAPI()" id="uploadBtn" style="display: none;">
+                        <span>Upload All to API</span>
+                    </button>
+                    <button class="btn" onclick="loadEnhancedReport()" id="reportBtn" style="display: none;">
+                        <span>Load Analytics Dashboard</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="status" id="statusDiv"></div>
+
+        <!-- Clean Dashboard -->
+        <div class="dashboard" id="dashboard">
+            <!-- Performance Health Status -->
+            <div class="health-status" id="healthStatus">
+                <div class="health-score" id="healthScore">95</div>
+                <div class="health-info">
+                    <h3 id="healthTitle">Performance Health: Excellent</h3>
+                    <p id="healthDescription">All systems performing optimally</p>
+                </div>
+            </div>
+
+            <!-- Key Metrics with Trends -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-title">Average Response Time</div>
+                        <div class="trend-indicator" id="responseTimeTrend">
+                            <span>↓</span>
+                            <span>-5.2%</span>
+                        </div>
+                    </div>
+                    <div class="metric-value" id="responseTimeValue">653 ms</div>
+                    <div class="metric-change" id="responseTimeChange">vs last week: 689 ms</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-title">Throughput</div>
+                        <div class="trend-indicator" id="throughputTrend">
+                            <span>↑</span>
+                            <span>+12.3%</span>
+                        </div>
+                    </div>
+                    <div class="metric-value" id="throughputValue">2.47 req/s</div>
+                    <div class="metric-change" id="throughputChange">vs last week: 2.20 req/s</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-title">Error Rate</div>
+                        <div class="trend-indicator" id="errorRateTrend">
+                            <span>↓</span>
+                            <span>-100%</span>
+                        </div>
+                    </div>
+                    <div class="metric-value" id="errorRateValue">0.00%</div>
+                    <div class="metric-change" id="errorRateChange">vs last week: 0.15%</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-title">Total Requests</div>
+                        <div class="trend-indicator" id="totalRequestsTrend">
+                            <span>↑</span>
+                            <span>+45.8%</span>
+                        </div>
+                    </div>
+                    <div class="metric-value" id="totalRequestsValue">660</div>
+                    <div class="metric-change" id="totalRequestsChange">vs last week: 453</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-container">
+                <div class="chart-card">
+                    <div class="chart-title">Response Time Trend</div>
+                    <canvas id="responseTimeChart" height="300"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Throughput & Error Rate</div>
+                    <canvas id="throughputChart" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Performing Requests -->
+            <div class="top-requests">
+                <div class="request-list">
+                    <h3>Fastest Requests</h3>
+                    <div id="fastestRequests"></div>
+                </div>
+                <div class="request-list">
+                    <h3>Slowest Requests</h3>
+                    <div id="slowestRequests"></div>
+                </div>
+            </div>
+
+            <!-- Insights and Recommendations -->
+            <div class="insights-section">
+                <div class="insights-card">
+                    <h3>Performance Insights</h3>
+                    <div id="insightsList"></div>
+                </div>
+                <div class="insights-card">
+                    <h3>Recommendations</h3>
+                    <div id="recommendationsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let extractedTestsData = [];
+
+        // File handling code
+        const uploadArea = document.querySelector('.upload-area');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#000';
+            uploadArea.style.backgroundColor = '#f5f5f5';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#d0d0d0';
+            uploadArea.style.backgroundColor = '#fafafa';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#d0d0d0';
+            uploadArea.style.backgroundColor = '#fafafa';
+            const files = Array.from(e.dataTransfer.files);
+            addFiles(files);
+        });
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            addFiles(files);
+        }
+
+        function addFiles(files) {
+            const validFiles = files.filter(file => file.name.toLowerCase().endsWith('.html'));
+            if (validFiles.length === 0) {
+                showStatus('Please select HTML files only', 'error');
+                return;
+            }
+            selectedFiles = [...selectedFiles, ...validFiles];
+            displayFilesList();
+            document.getElementById('uploadedFiles').style.display = 'block';
+        }
+
+        function displayFilesList() {
+            const filesList = document.getElementById('filesList');
+            filesList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div>
+                        <strong>${file.name}</strong> 
+                        <span style="color: #666;">(${(file.size / 1024).toFixed(1)} KB)</span>
+                        <span id="status-${index}" style="margin-left: 10px;"></span>
+                    </div>
+                    <button class="remove-file" onclick="removeFile(${index})">Remove</button>
+                `;
+                filesList.appendChild(fileItem);
+            });
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            extractedTestsData.splice(index, 1);
+            displayFilesList();
+            if (selectedFiles.length === 0) {
+                document.getElementById('uploadedFiles').style.display = 'none';
+            }
+        }
+
+        async function processAllFiles() {
+            if (selectedFiles.length === 0) return;
+
+            const processBtn = document.getElementById('processBtn');
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<div class="loading"></div> Processing...';
+            extractedTestsData = [];
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const statusSpan = document.getElementById(`status-${i}`);
+                statusSpan.textContent = 'Processing...';
+                statusSpan.style.color = '#666';
+
+                try {
+                    const testData = await extractDataFromHTMLFile(file);
+                    extractedTestsData.push(testData);
+                    statusSpan.textContent = '✓ Processed';
+                    statusSpan.style.color = '#000';
+                } catch (error) {
+                    statusSpan.textContent = '✗ Error';
+                    statusSpan.style.color = '#666';
+                }
+            }
+
+            processBtn.disabled = false;
+            processBtn.innerHTML = '<span>Process All Files</span>';
+            document.getElementById('uploadBtn').style.display = 'inline-flex';
+            showStatus(`Processed ${extractedTestsData.length} files`, 'success');
+        }
+
+        async function extractDataFromHTMLFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const htmlContent = e.target.result;
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlContent, 'text/html');
+
+                        const testInfo = extractTestInfoFromHTML(doc);
+                        const summaryData = extractSummaryDataFromHTML(doc);
+                        const requestMetrics = extractRequestMetricsFromHTML(doc);
+
+                        resolve({
+                            fileName: file.name,
+                            testName: testInfo.testName || file.name.replace('.html', ''),
+                            testId: testInfo.testId || generateTestId(),
+                            startTime: testInfo.startTime,
+                            endTime: testInfo.endTime,
+                            totalRequests: summaryData.totalRequests,
+                            throughput: summaryData.throughput,
+                            averageResponseTime: summaryData.averageResponseTime,
+                            errorRate: summaryData.errorRate,
+                            virtualUsers: testInfo.virtualUsers,
+                            duration: testInfo.duration,
+                            loadProfile: testInfo.loadProfile,
+                            environment: testInfo.environment,
+                            requestMetrics: requestMetrics
+                        });
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function extractTestInfoFromHTML(doc) {
+            const titleElement = doc.querySelector('#heading-title');
+            const testName = titleElement ? titleElement.textContent.trim() : '';
+
+            const today = new Date();
+            const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+            const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+
+            return {
+                testName,
+                testId: generateTestId(),
+                startTime,
+                endTime,
+                virtualUsers: 2,
+                duration: '1 minute',
+                loadProfile: 'Peak',
+                environment: 'Production'
+            };
+        }
+
+        function extractSummaryDataFromHTML(doc) {
+            const metricsContainer = doc.querySelector('.metrics-container');
+            let totalRequests = 0, throughput = 0, averageResponseTime = 0, errorRate = 0;
+
+            if (metricsContainer) {
+                const metricDetails = metricsContainer.querySelectorAll('.metric-detail');
+                metricDetails.forEach(detail => {
+                    const label = detail.querySelector('.title')?.textContent.trim().toLowerCase();
+                    const value = detail.querySelector('.metric-data')?.textContent.trim();
+
+                    if (label && value) {
+                        if (label.includes('total requests')) totalRequests = parseInt(value) || 0;
+                        else if (label.includes('throughput')) throughput = parseFloat(value.replace(/[^\d.]/g, '')) || 0;
+                        else if (label.includes('average response time')) averageResponseTime = parseFloat(value.replace(/[^\d.]/g, '')) || 0;
+                        else if (label.includes('error rate')) errorRate = parseFloat(value.replace(/[^\d.]/g, '')) || 0;
+                    }
+                });
+            }
+
+            return { totalRequests, throughput, averageResponseTime, errorRate };
+        }
+
+        function extractRequestMetricsFromHTML(doc) {
+            const metrics = [];
+            const table = Array.from(doc.querySelectorAll('table')).find(t => {
+                const headers = Array.from(t.querySelectorAll('th')).map(th => th.textContent.trim());
+                return headers.some(h => h.includes('Request')) && headers.some(h => h.includes('Total requests'));
+            });
+
+            if (table) {
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 8) {
+                        const requestCell = cells[0];
+                        const methodSpan = requestCell.querySelector('[style*="color: #0CBB52"], [style*="color: #097BED"]');
+                        const methodElement = requestCell.querySelector('.styled-font');
+
+                        metrics.push({
+                            requestName: methodElement ? methodElement.textContent.trim() : 'Unknown Request',
+                            httpMethod: methodSpan ? methodSpan.textContent.trim() : 'GET',
+                            url: requestCell.querySelector('[style*="color: #6B6B6B"]')?.textContent.trim() || '',
+                            totalRequests: parseInt(cells[1].textContent.trim()) || 0,
+                            requestsPerSecond: parseFloat(cells[2].textContent.trim()) || 0,
+                            minResponseTime: parseInt(cells[3].textContent.trim().replace(/,/g, '')) || 0,
+                            avgResponseTime: parseInt(cells[4].textContent.trim().replace(/,/g, '')) || 0,
+                            ninetiethPercentile: parseInt(cells[5].textContent.trim().replace(/,/g, '')) || 0,
+                            maxResponseTime: parseInt(cells[6].textContent.trim().replace(/,/g, '')) || 0,
+                            errorPercentage: parseFloat(cells[7].textContent.trim()) || 0
+                        });
+                    }
+                });
+            }
+            return metrics;
+        }
+
+        function generateTestId() {
+            return 'test-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+        }
+
+        async function uploadAllToAPI() {
+            if (!extractedTestsData || extractedTestsData.length === 0) return;
+
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            if (!apiUrl) {
+                showStatus('Please enter API URL', 'error');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<div class="loading"></div> Uploading...';
+
+            let successCount = 0;
+
+            for (const testData of extractedTestsData) {
+                try {
+                    const response = await fetch(`${apiUrl}/api/performance-tests`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ testRun: testData })
+                    });
+
+                    if (response.ok) successCount++;
+                } catch (error) {
+                    console.error('Upload error:', error);
+                }
+            }
+
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = '<span>Upload All to API</span>';
+
+            if (successCount > 0) {
+                document.getElementById('reportBtn').style.display = 'inline-flex';
+                showStatus(`Successfully uploaded ${successCount} files`, 'success');
+            }
+        }
+
+        async function loadEnhancedReport() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            if (!apiUrl) return;
+
+            const reportBtn = document.getElementById('reportBtn');
+            reportBtn.disabled = true;
+            reportBtn.innerHTML = '<div class="loading"></div> Loading...';
+
+            try {
+                const response = await fetch(`${apiUrl}/api/enhanced-weekly-report`);
+                if (response.ok) {
+                    const reportData = await response.json();
+                    displayEnhancedDashboard(reportData);
+                    showStatus('Analytics dashboard loaded successfully', 'success');
+                } else {
+                    showStatus(`Failed to load report: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Network error: ${error.message}`, 'error');
+            } finally {
+                reportBtn.disabled = false;
+                reportBtn.innerHTML = '<span>Load Analytics Dashboard</span>';
+            }
+        }
+
+        function displayEnhancedDashboard(data) {
+            updateHealthStatus(data.indicators);
+            updateMetricCard('responseTime', data.averageResponseTime);
+            updateMetricCard('throughput', data.averageThroughput);
+            updateMetricCard('errorRate', data.averageErrorRate);
+            updateMetricCard('totalRequests', data.totalRequestsProcessed);
+
+            createResponseTimeChart(data.charts);
+            createThroughputChart(data.charts);
+
+            displayTopRequests(data.fastestRequests, data.slowestRequests);
+            displayInsights(data.indicators);
+
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        function updateHealthStatus(indicators) {
+            const healthScore = document.getElementById('healthScore');
+            const healthTitle = document.getElementById('healthTitle');
+
+            healthScore.textContent = indicators.performanceScore.toFixed(0);
+            healthTitle.textContent = `Performance Health: ${indicators.overallHealthStatus}`;
+        }
+
+        function updateMetricCard(metricType, metricData) {
+            const valueElement = document.getElementById(`${metricType}Value`);
+            const changeElement = document.getElementById(`${metricType}Change`);
+            const trendElement = document.getElementById(`${metricType}Trend`);
+
+            valueElement.textContent = metricData.formattedValue;
+            changeElement.textContent = `vs last week: ${metricData.previousValue.toFixed(2)} ${getUnit(metricType)}`;
+
+            const trendClass = metricData.trend === 'Up' ? 'trend-up' :
+                metricData.trend === 'Down' ? 'trend-down' : 'trend-stable';
+            const trendSymbol = metricData.trend === 'Up' ? '↑' :
+                metricData.trend === 'Down' ? '↓' : '→';
+
+            trendElement.className = `trend-indicator ${trendClass}`;
+            trendElement.innerHTML = `<span>${trendSymbol}</span><span>${metricData.formattedChange}</span>`;
+        }
+
+        function getUnit(metricType) {
+            switch (metricType) {
+                case 'responseTime': return 'ms';
+                case 'throughput': return 'req/s';
+                case 'errorRate': return '%';
+                case 'totalRequests': return 'requests';
+                default: return '';
+            }
+        }
+
+        function createResponseTimeChart(chartData) {
+            const ctx = document.getElementById('responseTimeChart').getContext('2d');
+
+            const cleanResponseTimeData = chartData.responseTimeData.map(val => Math.max(0, val || 0));
+            const maxResponseTime = Math.max(...cleanResponseTimeData, 1000);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.timeLabels,
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: cleanResponseTimeData,
+                        borderColor: '#000',
+                        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#000'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: Math.ceil(maxResponseTime * 1.1),
+                            title: {
+                                display: true,
+                                text: 'Response Time (ms)',
+                                color: '#000',
+                                font: { weight: 'bold' }
+                            },
+                            ticks: {
+                                color: '#666'
+                            },
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time', color: '#000' },
+                            ticks: { color: '#666' },
+                            grid: { color: '#f0f0f0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createThroughputChart(chartData) {
+            const ctx = document.getElementById('throughputChart').getContext('2d');
+
+            const cleanThroughputData = chartData.throughputData.map(val => Math.max(0, val || 0));
+            const cleanErrorRateData = chartData.errorRateData.map(val => Math.max(0, val || 0));
+
+            const maxThroughput = Math.max(...cleanThroughputData, 1);
+            const maxErrorRate = Math.max(...cleanErrorRateData, 5);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.timeLabels,
+                    datasets: [
+                        {
+                            label: 'Throughput (req/s)',
+                            data: cleanThroughputData,
+                            borderColor: '#000',
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                            borderWidth: 2,
+                            yAxisID: 'y',
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: '#000'
+                        },
+                        {
+                            label: 'Error Rate (%)',
+                            data: cleanErrorRateData,
+                            borderColor: '#666',
+                            backgroundColor: 'rgba(102, 102, 102, 0.05)',
+                            borderWidth: 2,
+                            yAxisID: 'y1',
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: '#666'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            min: 0,
+                            max: Math.ceil(maxThroughput * 1.1),
+                            title: {
+                                display: true,
+                                text: 'Throughput (req/s)',
+                                color: '#000',
+                                font: { weight: 'bold' }
+                            },
+                            ticks: { color: '#000' },
+                            grid: { color: '#f0f0f0' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            min: 0,
+                            max: Math.max(maxErrorRate * 1.2, 5),
+                            title: {
+                                display: true,
+                                text: 'Error Rate (%)',
+                                color: '#666',
+                                font: { weight: 'bold' }
+                            },
+                            ticks: { color: '#666' },
+                            grid: { drawOnChartArea: false }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time', color: '#000' },
+                            ticks: { color: '#666' },
+                            grid: { color: '#f0f0f0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTopRequests(fastest, slowest) {
+            const fastestDiv = document.getElementById('fastestRequests');
+            const slowestDiv = document.getElementById('slowestRequests');
+
+            fastestDiv.innerHTML = fastest.map(req => `
+                <div class="request-item request-fast">
+                    <div>
+                        <strong>${req.requestName}</strong>
+                        <div style="font-size: 0.9rem; color: #666;">${req.httpMethod}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div><strong>${req.averageResponseTime.toFixed(0)}ms</strong></div>
+                        <div style="font-size: 0.9rem; color: #666;">${req.totalRequests} requests</div>
+                    </div>
+                </div>
+            `).join('');
+
+            slowestDiv.innerHTML = slowest.map(req => `
+                <div class="request-item request-slow">
+                    <div>
+                        <strong>${req.requestName}</strong>
+                        <div style="font-size: 0.9rem; color: #666;">${req.httpMethod}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div><strong>${req.averageResponseTime.toFixed(0)}ms</strong></div>
+                        <div style="font-size: 0.9rem; color: #666;">${req.totalRequests} requests</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayInsights(indicators) {
+            const insightsList = document.getElementById('insightsList');
+            const recommendationsList = document.getElementById('recommendationsList');
+
+            insightsList.innerHTML = indicators.insights.map(insight =>
+                `<div class="insight-item">${insight}</div>`
+            ).join('');
+
+            recommendationsList.innerHTML = indicators.recommendations.map(rec =>
+                `<div class="recommendation-item">${rec}</div>`
+            ).join('');
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusDiv');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => statusDiv.style.display = 'none', 5000);
+            }
+        }
+    </script>
+</body>
+
+</html>
